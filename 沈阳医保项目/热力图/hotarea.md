@@ -7,5 +7,33 @@
 ![](./hotarea.jpg)
 
 ## 实现
+1. 从数据库中获得居民居住地信息。
+2. 通过百度API， 根据地址信息， 抽取GPS信息。并保存在数据库中lng, lat字段当中。
+
+		  allRows = cursor.fetchall();
+	      preurl='http://api.map.baidu.com/geocoder/v2/?address='
+	      posturl='&output=json&city=%E6%B2%88%E9%98%B3%E5%B8%82&ak=1mFuOI0E7mSw4ot5188kcvG2LpIfdQnu'
+	      data=[]
+	      for r in allRows:
+	          d={}
+	          d['count']=r[0];
+	          d['lng']=r[1]
+	          d['lat']=r[2]
+	          data.append(d)
+	          req = ureq.Request(url = '%s%s%s' % (preurl,parse.quote(r[1]),posturl))
+	          res = ureq.urlopen(req)
+	          res = res.read()
+	          #print(res.decode(encoding='utf-8')[0])
+	          d=json.loads(res.decode(encoding='utf-8'))
+	          if d['status']==0:
+	              print(r[1])
+	              # print(d['result']['location'])
+	              isql='update resident_GPS set lng=%s, lat=%s where id=%d' %(d['result']['location']['lng'],d['result']['location']['lat'],r[0])
+	              cursor.execute(isql)
 
 
+3. 展示的时候， 由于居民信息比较多， 目前采用将GPS信息取前端5位进行group，以免打点显示的时候过于密集。
+	
+		SELECT count(*), left(lng, 7),left(lat,7) FROM fdms.resident_gps where lng!='' group by left(lng,5),left(lat,5)
+
+4. 利用百度提供的热力图组件， 进行地图绘制， [代码如下](./hotarea.html)。
